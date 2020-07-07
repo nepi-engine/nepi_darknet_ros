@@ -139,6 +139,7 @@ if (CUDA_FOUND)
 
   link_directories(
     ${CUDA_TOOLKIT_ROOT_DIR}/lib
+    /usr/local/cuda/lib64
   )
 
   cuda_add_library(${PROJECT_NAME}_lib
@@ -203,6 +204,23 @@ install(
   DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
+)
+
+## Mark other files for installation (e.g. launch and bag files, etc.)
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+)
+
+# Install ROS config files to the project share destination
+install(DIRECTORY config/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
+  USE_SOURCE_PERMISSIONS
+)
+
+# Install Weights and Network Configs
+install(DIRECTORY yolo_network_config/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/yolo_network_config
+  USE_SOURCE_PERMISSIONS
 )
 
 # Download yolov2-tiny.weights
