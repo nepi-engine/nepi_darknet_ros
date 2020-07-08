@@ -26,6 +26,7 @@
     <param name="weights_path"          value="$(arg yolo_weights_path)" />
     <param name="config_path"           value="$(arg yolo_config_path)" />
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
+    <param name="publishers/detection_image/topic" value="$(arg namespace)/classifier/detection_image" />
     <remap from="camera/rgb/image_raw"  to="$(arg image)" />
   </node>
 
