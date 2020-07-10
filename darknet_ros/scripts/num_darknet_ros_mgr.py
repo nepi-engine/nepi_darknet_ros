@@ -10,7 +10,9 @@ import rospy
 
 from std_msgs.msg import Empty
 from num_sdk_msgs.srv import ImageClassifierListQuery, ImageClassifierListQueryResponse
+from num_sdk_msgs.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryResponse
 from num_sdk_msgs.msg import ClassifierSelection
+from darknet_ros_msgs.msg import ObjectCount
 
 class DarknetRosMgr:
     NODE_NAME = "DarknetRosMgr"
@@ -19,16 +21,25 @@ class DarknetRosMgr:
     darknet_cfg_files = []
     classifier_list = []
 
+    current_classifier = "None"
+    current_img_topic = "None"
+    classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
+
     darknet_ros_process = None
 
+    found_object_sub = None
+
     def provide_classifier_list(self, req):
-        # Just proxy the param server
         return ImageClassifierListQueryResponse(self.classifier_list)
+
+    def provide_classifier_status(self, req):
+        return [self.current_img_topic, self.current_classifier, self.classifier_state]
 
     def stop_classifier(self):
         if not (None == self.darknet_ros_process):
             self.darknet_ros_process.terminate()
             self.darknet_ros_process = None
+            self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
 
     def stop_classifier_cb(self, msg):
         self.stop_classifier()
@@ -65,6 +76,19 @@ class DarknetRosMgr:
         rospy.loginfo("Launching Darknet ROS Process: %s, %s, %s", namespace_arg, network_param_file_arg, input_img_arg)
         self.darknet_ros_process = subprocess.Popen(["roslaunch", "num_darknet_ros", "darknet_ros.launch", namespace_arg, network_param_file_arg, input_img_arg])
 
+        # Update our local status
+        self.current_classifier = classifier_selection_msg.classifier
+        self.current_img_topic = classifier_selection_msg.img_topic
+        self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_LOADING
+
+        # Resubscribe to found_object so that we know when the classifier is up and running again
+        self.found_object_sub = rospy.Subscriber('classifier/found_object', ObjectCount, self.got_darknet_update)
+
+    def got_darknet_update(self, msg):
+        # Means that darknet is up and running
+        self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_RUNNING
+        self.found_object_sub.unregister()
+
     def __init__(self):
         rospy.loginfo("Starting " + self.NODE_NAME + " Node")
         rospy.init_node(self.NODE_NAME)
@@ -84,10 +108,11 @@ class DarknetRosMgr:
             rospy.logwarn("No classiers identified for this system at %s", self.DARKNET_CFG_PATH)
 
         rospy.Service('img_classifier_list_query', ImageClassifierListQuery, self.provide_classifier_list)
+        rospy.Service('img_classifier_status_query', ImageClassifierStatusQuery, self.provide_classifier_status)
 
         rospy.Subscriber('start_classifier', ClassifierSelection, self.start_classifier_cb)
         rospy.Subscriber('stop_classifier', Empty, self.stop_classifier_cb)
-
+        
         rospy.spin()
 
 if __name__ == '__main__':
