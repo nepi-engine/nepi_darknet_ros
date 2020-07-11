@@ -60,10 +60,15 @@ class DarknetRosMgr:
 
         # Check that the requested classifier exists
         if not (classifier_selection_msg.classifier in self.classifier_list):
-            rospy.logerr("Uknown classifier requested: %s", classifier_selection_msg.classifier)
+            rospy.logerr("Unknown classifier requested: %s", classifier_selection_msg.classifier)
             return
 
         classifier_cfg_file = self.DARKNET_CFG_PATH + classifier_selection_msg.classifier + ".yaml"
+
+        # Validate the requested_detection threshold
+        if (classifier_selection_msg.detection_threshold < 0.0 or classifier_selection_msg.detection_threshold > 1.0):
+            rospy.logerr("Requested detection threshold out of range (0.0 - 1.0)")
+            return
 
         # Stop the current classifier if it is running
         self.stop_classifier()
@@ -72,9 +77,10 @@ class DarknetRosMgr:
         namespace_arg = "namespace:=" + rospy.get_namespace();
         network_param_file_arg = "network_param_file:=" + classifier_cfg_file
         input_img_arg = "input_img:=" + classifier_selection_msg.img_topic
+        detection_threshold_arg = "detection_threshold:=" + str(classifier_selection_msg.detection_threshold)
 
-        rospy.loginfo("Launching Darknet ROS Process: %s, %s, %s", namespace_arg, network_param_file_arg, input_img_arg)
-        self.darknet_ros_process = subprocess.Popen(["roslaunch", "num_darknet_ros", "darknet_ros.launch", namespace_arg, network_param_file_arg, input_img_arg])
+        rospy.loginfo("Launching Darknet ROS Process: %s, %s, %s, %s", namespace_arg, network_param_file_arg, input_img_arg, detection_threshold_arg)
+        self.darknet_ros_process = subprocess.Popen(["roslaunch", "num_darknet_ros", "darknet_ros.launch", namespace_arg, network_param_file_arg, input_img_arg, detection_threshold_arg])
 
         # Update our local status
         self.current_classifier = classifier_selection_msg.classifier
@@ -112,7 +118,7 @@ class DarknetRosMgr:
 
         rospy.Subscriber('start_classifier', ClassifierSelection, self.start_classifier_cb)
         rospy.Subscriber('stop_classifier', Empty, self.stop_classifier_cb)
-        
+
         rospy.spin()
 
 if __name__ == '__main__':
