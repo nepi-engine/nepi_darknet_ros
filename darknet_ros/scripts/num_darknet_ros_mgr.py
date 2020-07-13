@@ -66,8 +66,8 @@ class DarknetRosMgr:
         classifier_cfg_file = self.DARKNET_CFG_PATH + classifier_selection_msg.classifier + ".yaml"
 
         # Validate the requested_detection threshold
-        if (classifier_selection_msg.detection_threshold < 0.0 or classifier_selection_msg.detection_threshold > 1.0):
-            rospy.logerr("Requested detection threshold out of range (0.0 - 1.0)")
+        if (classifier_selection_msg.detection_threshold < 0.001 or classifier_selection_msg.detection_threshold > 1.0):
+            rospy.logerr("Requested detection threshold (%f) out of range (0.001 - 1.0)", classifier_selection_msg.detection_threshold)
             return
 
         # Stop the current classifier if it is running
