@@ -157,6 +157,7 @@ void YoloObjectDetector::init()
 
   imageSubscriber_ = imageTransport_.subscribe(cameraTopicName, cameraQueueSize,
                                                &YoloObjectDetector::cameraCallback, this);
+  setThresholdSubscriber_ = nodeHandle_.subscribe("set_threshold", 1, &YoloObjectDetector::setThresholdCallback, this);
   objectPublisher_ = nodeHandle_.advertise<darknet_ros_msgs::ObjectCount>(objectDetectorTopicName,
                                                                             objectDetectorQueueSize,
                                                                             objectDetectorLatch);
@@ -206,6 +207,21 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg)
     frameHeight_ = cam_image->image.size().height;
   }
   return;
+}
+
+void YoloObjectDetector::setThresholdCallback(const std_msgs::Float32::ConstPtr& msg)
+{
+  const float new_thresh = msg->data;
+  if (new_thresh < 0.0f || new_thresh > 1.0f)
+  {
+    ROS_ERROR("Invalid YoloObjectDetector threshold %f: Must be in [0.0, 1.0]", new_thresh);
+    return;
+  }
+  {
+    // Avoid setting threshold to 0 -- use an epsilon instead
+    boost::unique_lock<boost::shared_mutex> lockThreshold(mutexThreshold_);
+    demoThresh_ = (new_thresh == 0.0f)? 0.01 : new_thresh;
+  }
 }
 
 void YoloObjectDetector::checkForObjectsActionGoalCB()
@@ -320,7 +336,12 @@ detection *YoloObjectDetector::avgPredictions(network *net, int *nboxes)
       count += l.outputs;
     }
   }
-  detection *dets = get_network_boxes(net, buff_[0].w, buff_[0].h, demoThresh_, demoHier_, 0, 1, nboxes);
+  float thresh;
+  {
+    boost::unique_lock<boost::shared_mutex> lockThreshold(mutexThreshold_);
+    thresh = demoThresh_;
+  }
+  detection *dets = get_network_boxes(net, buff_[0].w, buff_[0].h, thresh, demoHier_, 0, 1, nboxes);
   return dets;
 }
 
@@ -347,7 +368,12 @@ void *YoloObjectDetector::detectInThread()
     printf("Objects:\n\n");
   }
   image display = buff_[(buffIndex_+2) % 3];
-  draw_detections(display, dets, nboxes, demoThresh_, demoNames_, demoAlphabet_, demoClasses_);
+  float thresh;
+  {
+    boost::unique_lock<boost::shared_mutex> lockThreshold(mutexThreshold_);
+    thresh = demoThresh_;
+  }
+  draw_detections(display, dets, nboxes, thresh, demoNames_, demoAlphabet_, demoClasses_);
 
   // extract the bounding boxes and send them to ROS
   int i, j;

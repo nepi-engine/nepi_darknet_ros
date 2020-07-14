@@ -20,6 +20,7 @@
 // ROS
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
+#include <std_msgs/Float32.h>
 #include <actionlib/server/simple_action_server.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
@@ -107,6 +108,12 @@ class YoloObjectDetector
   void cameraCallback(const sensor_msgs::ImageConstPtr& msg);
 
   /*!
+   * Callback for set_threshold topic
+   * @param[in] msg new threshold value
+   */
+  void setThresholdCallback(const std_msgs::Float32ConstPtr& msg);
+
+  /*!
    * Check for objects action goal callback.
    */
   void checkForObjectsActionGoalCB();
@@ -147,6 +154,7 @@ class YoloObjectDetector
 
   //! ROS subscriber and publisher.
   image_transport::Subscriber imageSubscriber_;
+  ros::Subscriber setThresholdSubscriber_;
   ros::Publisher objectPublisher_;
   ros::Publisher boundingBoxesPublisher_;
 
@@ -212,6 +220,8 @@ class YoloObjectDetector
 
   int actionId_;
   boost::shared_mutex mutexActionStatus_;
+
+  boost::shared_mutex mutexThreshold_;
 
   // double getWallTime();
 
