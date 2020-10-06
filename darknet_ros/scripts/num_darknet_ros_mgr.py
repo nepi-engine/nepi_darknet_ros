@@ -14,6 +14,8 @@ from num_sdk_msgs.srv import ImageClassifierStatusQuery, ImageClassifierStatusQu
 from num_sdk_msgs.msg import ClassifierSelection
 from darknet_ros_msgs.msg import ObjectCount
 
+from num_sdk_base.save_cfg_if import SaveCfgIF
+
 class DarknetRosMgr:
     NODE_NAME = "DarknetRosMgr"
     DARKNET_CFG_PATH = '/opt/numurus/ros/share/num_darknet_ros/config/'
@@ -23,6 +25,7 @@ class DarknetRosMgr:
 
     current_classifier = "None"
     current_img_topic = "None"
+    current_threshold = 0.0
     classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
 
     darknet_ros_process = None
@@ -40,34 +43,40 @@ class DarknetRosMgr:
             self.darknet_ros_process.terminate()
             self.darknet_ros_process = None
             self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
+            self.current_classifier = "None"
+            self.current_img_topic = "None"
+            self.current_threshold = 0.0
 
     def stop_classifier_cb(self, msg):
         self.stop_classifier()
 
     def start_classifier_cb(self, classifier_selection_msg):
+        self.start_classifier(classifier=classifier_selection_msg.classifier, input_img=classifier_selection_msg.img_topic, threshold=classifier_selection_msg.detection_threshold)
+
+    def start_classifier(self, classifier, input_img, threshold):
         # First, validate the inputs
         # Check that the requested topic exists and has the expected type
         all_topics = rospy.get_published_topics()
         found_topic = False
         for t in all_topics:
-            if (t[0] == classifier_selection_msg.img_topic) and (t[1] == 'sensor_msgs/Image'):
+            if (t[0] == input_img) and (t[1] == 'sensor_msgs/Image'):
                 found_topic = True
                 break
 
         if (False == found_topic):
-            rospy.logerr("Topic %s is not a valid image topic -- not starting classifier", classifier_selection_msg.img_topic)
+            rospy.logerr("Topic %s is not a valid image topic -- not starting classifier", input_img)
             return
 
         # Check that the requested classifier exists
-        if not (classifier_selection_msg.classifier in self.classifier_list):
-            rospy.logerr("Unknown classifier requested: %s", classifier_selection_msg.classifier)
+        if not (classifier in self.classifier_list):
+            rospy.logerr("Unknown classifier requested: %s", classifier)
             return
 
-        classifier_cfg_file = self.DARKNET_CFG_PATH + classifier_selection_msg.classifier + ".yaml"
+        classifier_cfg_file = self.DARKNET_CFG_PATH + classifier + ".yaml"
 
         # Validate the requested_detection threshold
-        if (classifier_selection_msg.detection_threshold < 0.001 or classifier_selection_msg.detection_threshold > 1.0):
-            rospy.logerr("Requested detection threshold (%f) out of range (0.001 - 1.0)", classifier_selection_msg.detection_threshold)
+        if (threshold < 0.001 or threshold > 1.0):
+            rospy.logerr("Requested detection threshold (%f) out of range (0.001 - 1.0)", threshold)
             return
 
         # Stop the current classifier if it is running
@@ -76,15 +85,16 @@ class DarknetRosMgr:
         # Build up the arg string for the new classifier launch command
         namespace_arg = "namespace:=" + rospy.get_namespace();
         network_param_file_arg = "network_param_file:=" + classifier_cfg_file
-        input_img_arg = "input_img:=" + classifier_selection_msg.img_topic
-        detection_threshold_arg = "detection_threshold:=" + str(classifier_selection_msg.detection_threshold)
+        input_img_arg = "input_img:=" + input_img
+        detection_threshold_arg = "detection_threshold:=" + str(threshold)
 
         rospy.loginfo("Launching Darknet ROS Process: %s, %s, %s, %s", namespace_arg, network_param_file_arg, input_img_arg, detection_threshold_arg)
         self.darknet_ros_process = subprocess.Popen(["roslaunch", "num_darknet_ros", "darknet_ros.launch", namespace_arg, network_param_file_arg, input_img_arg, detection_threshold_arg])
 
         # Update our local status
-        self.current_classifier = classifier_selection_msg.classifier
-        self.current_img_topic = classifier_selection_msg.img_topic
+        self.current_classifier = classifier
+        self.current_img_topic = input_img
+        self.current_threshold = threshold
         self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_LOADING
 
         # Resubscribe to found_object so that we know when the classifier is up and running again
@@ -94,6 +104,15 @@ class DarknetRosMgr:
         # Means that darknet is up and running
         self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_RUNNING
         self.found_object_sub.unregister()
+
+    def setCurrentSettingsAsDefault(self):
+        classifier_val = self.current_classifier if self.current_classifier != "None" else ''
+        rospy.set_param('~default_classifier', classifier_val)
+
+        img_val = self.current_img_topic if self.current_img_topic != "None" else ''
+        rospy.set_param('~default_image', img_val)
+
+        rospy.set_param('~default_threshold', self.current_threshold)
 
     def __init__(self):
         rospy.loginfo("Starting " + self.NODE_NAME + " Node")
@@ -118,6 +137,22 @@ class DarknetRosMgr:
 
         rospy.Subscriber('start_classifier', ClassifierSelection, self.start_classifier_cb)
         rospy.Subscriber('stop_classifier', Empty, self.stop_classifier_cb)
+
+        self.save_cfg_if = SaveCfgIF(self.setCurrentSettingsAsDefault)
+
+        # Load default params
+        namespace = rospy.get_namespace()
+        try:
+            default_classifier = rospy.get_param('~default_classifier')
+            default_img_topic = rospy.get_param('~default_image')
+            default_threshold = rospy.get_param('~default_threshold')
+            if default_classifier != "None" and default_img_topic != "None":
+                rospy.loginfo("Classifier sleeping for 5 seconds to allow cameras to start")
+                rospy.sleep(5) # Let the cameras start up properly
+                rospy.loginfo('Starting classifier with parameters [' + default_classifier + ', ' + default_img_topic + ', ' + str(default_threshold) + ']')
+                self.start_classifier(default_classifier, default_img_topic, default_threshold)
+        except KeyError:
+            rospy.loginfo("Classifier unable to find default parameters... starting up with no classifier running")
 
         rospy.spin()
 

@@ -230,6 +230,12 @@ install(DIRECTORY yolo_network_config/
   USE_SOURCE_PERMISSIONS
 )
 
+# Install Manager Configuration
+install(DIRECTORY etc/
+  DESTINATION ${CATKIN_GLOBAL_ETC_DESTINATION}/num_darknet_ros_mgr
+  USE_SOURCE_PERMISSIONS
+)
+
 # Download yolov2-tiny.weights
 # set(PATH "${CMAKE_CURRENT_SOURCE_DIR}/yolo_network_config/weights")
 # set(FILE "${PATH}/yolov2-tiny.weights")

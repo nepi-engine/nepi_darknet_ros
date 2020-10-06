@@ -1,0 +1,7 @@
+# Set value "None" for no default classifier
+default_classifier: None
+
+# Set value "None" for no default classifier.
+# Image topic must include complete namespace
+default_image: None
+default_threshold: 0.3
