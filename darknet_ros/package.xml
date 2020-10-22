@@ -21,6 +21,7 @@
   <depend>darknet_ros_msgs</depend>
   <depend>actionlib</depend>
   <depend>num_sdk_msgs</depend>
+  <depend>num_sdk_base</depend>
 
   <!-- Test dependencies -->
   <test_depend>rostest</test_depend>

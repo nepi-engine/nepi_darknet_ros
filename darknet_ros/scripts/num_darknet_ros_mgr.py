@@ -13,8 +13,10 @@ from num_sdk_msgs.srv import ImageClassifierListQuery, ImageClassifierListQueryR
 from num_sdk_msgs.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryResponse
 from num_sdk_msgs.msg import ClassifierSelection
 from darknet_ros_msgs.msg import ObjectCount
+from darknet_ros_msgs.msg import BoundingBoxes
 
 from num_sdk_base.save_cfg_if import SaveCfgIF
+from num_sdk_base.save_data_if import SaveDataIF
 
 class DarknetRosMgr:
     NODE_NAME = "DarknetRosMgr"
@@ -114,6 +116,17 @@ class DarknetRosMgr:
 
         rospy.set_param('~default_threshold', self.current_threshold)
 
+    def boundingBoxesCallback(self, msg):
+        # Nothing to do if it isn't time to save yet.
+        if not self.save_data_if.data_product_should_save('detection_bounding_boxes'):
+            return
+
+        full_path_filename = self.save_data_if.get_filename_path_and_prefix() + 'classifier_bounding_boxes_' + self.save_data_if.get_timestamp_string(msg.header.stamp) + '.txt'
+
+        with open(full_path_filename, 'w') as f:
+            f.write('input_image: ' + self.current_img_topic + '\n')
+            f.write(str(msg))
+
     def __init__(self):
         rospy.loginfo("Starting " + self.NODE_NAME + " Node")
         rospy.init_node(self.NODE_NAME)
@@ -153,6 +166,10 @@ class DarknetRosMgr:
                 self.start_classifier(default_classifier, default_img_topic, default_threshold)
         except KeyError:
             rospy.loginfo("Classifier unable to find default parameters... starting up with no classifier running")
+
+        # Setup for data saving -- just bounding boxes for now
+        self.save_data_if = SaveDataIF(['detection_bounding_boxes'])
+        rospy.Subscriber('classifier/bounding_boxes', BoundingBoxes, self.boundingBoxesCallback)
 
         rospy.spin()
 

@@ -43,7 +43,7 @@ if ( X11_FOUND )
   message ( STATUS " X11_LIBRARIES: " ${X11_LIBRARIES} )
 endif ( X11_FOUND )
 
-# Find rquired packeges
+# Find required packages
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -56,6 +56,7 @@ find_package(catkin REQUIRED
     actionlib
     darknet_ros_msgs
     image_transport
+    num_sdk_base
 )
 
 # Enable OPENCV in darknet
