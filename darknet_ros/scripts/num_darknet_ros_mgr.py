@@ -108,11 +108,9 @@ class DarknetRosMgr:
         self.found_object_sub.unregister()
 
     def setCurrentSettingsAsDefault(self):
-        classifier_val = self.current_classifier if self.current_classifier != "None" else ''
-        rospy.set_param('~default_classifier', classifier_val)
+        rospy.set_param('~default_classifier', self.current_classifier)
 
-        img_val = self.current_img_topic if self.current_img_topic != "None" else ''
-        rospy.set_param('~default_image', img_val)
+        rospy.set_param('~default_image', self.current_img_topic)
 
         rospy.set_param('~default_threshold', self.current_threshold)
 
