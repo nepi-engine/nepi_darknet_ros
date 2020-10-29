@@ -125,6 +125,19 @@ class DarknetRosMgr:
             f.write('input_image: ' + self.current_img_topic + '\n')
             f.write(str(msg))
 
+    def updateFromParamServer(self):
+        try:
+            default_classifier = rospy.get_param('~default_classifier')
+            default_img_topic = rospy.get_param('~default_image')
+            default_threshold = rospy.get_param('~default_threshold')
+            if default_classifier != "None" and default_img_topic != "None":
+                rospy.loginfo("Classifier sleeping for 5 seconds to allow cameras to start")
+                rospy.sleep(5) # Let the cameras start up properly
+                rospy.loginfo('Starting classifier with parameters [' + default_classifier + ', ' + default_img_topic + ', ' + str(default_threshold) + ']')
+                self.start_classifier(default_classifier, default_img_topic, default_threshold)
+        except KeyError:
+            rospy.loginfo("Classifier unable to find default parameters... starting up with no classifier running")
+
     def __init__(self):
         rospy.loginfo("Starting " + self.NODE_NAME + " Node")
         rospy.init_node(self.NODE_NAME)
@@ -149,21 +162,11 @@ class DarknetRosMgr:
         rospy.Subscriber('start_classifier', ClassifierSelection, self.start_classifier_cb)
         rospy.Subscriber('stop_classifier', Empty, self.stop_classifier_cb)
 
-        self.save_cfg_if = SaveCfgIF(self.setCurrentSettingsAsDefault)
+        self.save_cfg_if = SaveCfgIF(updateParamsCallback=self.setCurrentSettingsAsDefault, paramsModifiedCallback=self.updateFromParamServer)
 
         # Load default params
-        namespace = rospy.get_namespace()
-        try:
-            default_classifier = rospy.get_param('~default_classifier')
-            default_img_topic = rospy.get_param('~default_image')
-            default_threshold = rospy.get_param('~default_threshold')
-            if default_classifier != "None" and default_img_topic != "None":
-                rospy.loginfo("Classifier sleeping for 5 seconds to allow cameras to start")
-                rospy.sleep(5) # Let the cameras start up properly
-                rospy.loginfo('Starting classifier with parameters [' + default_classifier + ', ' + default_img_topic + ', ' + str(default_threshold) + ']')
-                self.start_classifier(default_classifier, default_img_topic, default_threshold)
-        except KeyError:
-            rospy.loginfo("Classifier unable to find default parameters... starting up with no classifier running")
+        #namespace = rospy.get_namespace()
+        self.updateFromParamServer()
 
         # Setup for data saving -- just bounding boxes for now
         self.save_data_if = SaveDataIF(['detection_bounding_boxes'])
