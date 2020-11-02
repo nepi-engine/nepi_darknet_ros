@@ -8,7 +8,7 @@ import subprocess
 
 import rospy
 
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, Float32
 from num_sdk_msgs.srv import ImageClassifierListQuery, ImageClassifierListQueryResponse
 from num_sdk_msgs.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryResponse
 from num_sdk_msgs.msg import ClassifierSelection
@@ -21,13 +21,15 @@ from num_sdk_base.save_data_if import SaveDataIF
 class DarknetRosMgr:
     NODE_NAME = "DarknetRosMgr"
     DARKNET_CFG_PATH = '/opt/numurus/ros/share/num_darknet_ros/config/'
+    MIN_THRESHOLD = 0.001
+    MAX_THRESHOLD = 1.0
 
     darknet_cfg_files = []
     classifier_list = []
 
     current_classifier = "None"
     current_img_topic = "None"
-    current_threshold = 0.0
+    current_threshold = 0.3
     classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
 
     darknet_ros_process = None
@@ -38,7 +40,7 @@ class DarknetRosMgr:
         return ImageClassifierListQueryResponse(self.classifier_list)
 
     def provide_classifier_status(self, req):
-        return [self.current_img_topic, self.current_classifier, self.classifier_state]
+        return [self.current_img_topic, self.current_classifier, self.classifier_state, self.current_threshold]
 
     def stop_classifier(self):
         if not (None == self.darknet_ros_process):
@@ -47,13 +49,19 @@ class DarknetRosMgr:
             self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
             self.current_classifier = "None"
             self.current_img_topic = "None"
-            self.current_threshold = 0.0
+            #self.current_threshold = 0.0
 
     def stop_classifier_cb(self, msg):
         self.stop_classifier()
 
     def start_classifier_cb(self, classifier_selection_msg):
         self.start_classifier(classifier=classifier_selection_msg.classifier, input_img=classifier_selection_msg.img_topic, threshold=classifier_selection_msg.detection_threshold)
+
+    def set_threshold_cb(self, msg):
+        # All we do here is update the current_threshold so that it is up-to-date in status responses
+        # and will be saved properly in the config file (on request).
+        if (msg.data >= self.MIN_THRESHOLD and msg.data <= self.MAX_THRESHOLD):
+            self.current_threshold = msg.data
 
     def start_classifier(self, classifier, input_img, threshold):
         # First, validate the inputs
@@ -77,7 +85,7 @@ class DarknetRosMgr:
         classifier_cfg_file = self.DARKNET_CFG_PATH + classifier + ".yaml"
 
         # Validate the requested_detection threshold
-        if (threshold < 0.001 or threshold > 1.0):
+        if (threshold < self.MIN_THRESHOLD or threshold > self.MAX_THRESHOLD):
             rospy.logerr("Requested detection threshold (%f) out of range (0.001 - 1.0)", threshold)
             return
 
@@ -161,6 +169,7 @@ class DarknetRosMgr:
 
         rospy.Subscriber('start_classifier', ClassifierSelection, self.start_classifier_cb)
         rospy.Subscriber('stop_classifier', Empty, self.stop_classifier_cb)
+        rospy.Subscriber('num_darknet_ros/set_threshold', Float32, self.set_threshold_cb)
 
         self.save_cfg_if = SaveCfgIF(updateParamsCallback=self.setCurrentSettingsAsDefault, paramsModifiedCallback=self.updateFromParamServer)
 
