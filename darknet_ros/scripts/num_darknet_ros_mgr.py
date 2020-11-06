@@ -127,7 +127,7 @@ class DarknetRosMgr:
         if not self.save_data_if.data_product_should_save('detection_bounding_boxes'):
             return
 
-        full_path_filename = self.save_data_if.get_filename_path_and_prefix() + 'classifier_bounding_boxes_' + self.save_data_if.get_timestamp_string(msg.header.stamp) + '.txt'
+        full_path_filename = self.save_data_if.get_filename_path_and_prefix() + 'classifier_bounding_boxes_' + self.save_data_if.get_timestamp_string() + '.txt'
 
         with open(full_path_filename, 'w') as f:
             f.write('input_image: ' + self.current_img_topic + '\n')
