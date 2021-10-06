@@ -4,7 +4,7 @@
   <!-- Console launch prefix -->
   <arg name="launch_prefix" default=""/>
   <arg name="image" default="/camera/rgb/image_raw" />
-  <arg name="namespace" default="/numurus/3dx/000000" />
+  <arg name="namespace" default="/numurus/dev_3dx/000000" />
 
   <!-- Config and weights folder. -->
   <arg name="yolo_weights_path"          default="$(find num_darknet_ros)/yolo_network_config/weights"/>
@@ -15,7 +15,7 @@
   <arg name="network_param_file"         default="$(find num_darknet_ros)/config/yolov3-tiny.yaml"/>
 
   <!-- Input image -->
-  <arg name="input_img"                  default="$(arg namespace)/3dx_device/stereo_cam_mgr/img_0/image_raw"/>
+  <arg name="input_img"                  default="$(arg namespace)/sensor_3dx/stereo_cam_mgr/img_0/image_raw"/>
 
   <!-- Detection threshold -->
   <arg name="detection_threshold"        default="0.3"/>
