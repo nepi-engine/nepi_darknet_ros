@@ -247,6 +247,7 @@ install(DIRECTORY etc/
 # endif()
 
 # Download yolov3.weights
+set(PATH "${CMAKE_CURRENT_SOURCE_DIR}/yolo_network_config/weights")
 set(FILE "${PATH}/yolov3.weights")
 message(STATUS "Checking and downloading yolov3.weights if needed ...")
 if (NOT EXISTS "${FILE}")
