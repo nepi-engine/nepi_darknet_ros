@@ -43,13 +43,16 @@ class DarknetRosMgr:
         return [self.current_img_topic, self.current_classifier, self.classifier_state, self.current_threshold]
 
     def stop_classifier(self):
+        rospy.loginfo("Stopping classifier")
+        if not (None == self.found_object_sub):
+            self.found_object_sub.unregister()
         if not (None == self.darknet_ros_process):
             self.darknet_ros_process.terminate()
             self.darknet_ros_process = None
-            self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
-            self.current_classifier = "None"
-            self.current_img_topic = "None"
-            #self.current_threshold = 0.0
+        self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
+        self.current_classifier = "None"
+        self.current_img_topic = "None"
+        #self.current_threshold = 0.0
 
     def stop_classifier_cb(self, msg):
         self.stop_classifier()
