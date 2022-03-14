@@ -7,9 +7,18 @@ set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-unused-result -Wno-unknown-pragmas -W
 # Define path of darknet folder here.
 find_path(DARKNET_PATH
   NAMES "README.md"
-  HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../darknet/")
-message(STATUS "Darknet path dir = ${DARKNET_PATH}")
-add_definitions(-DDARKNET_FILE_PATH="${DARKNET_PATH}")
+  HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../darknet/"
+)
+
+# Data label images are installed below -- use that location for the compiled-in path to
+# avoid being dependent on the source folder at build time
+set( DARKNET_FILE_INSTALL_FOLDER
+  # Must hard-code it because CATKIN_GLOBAL_SHARE_DESTINATION is not yet defined at this point
+  # ${CATKIN_GLOBAL_SHARE_DESTINATION}/darknet
+  /opt/numurus/ros/share/darknet
+)
+message(WARNING "Installing darknet files to hard-coded ${DARKNET_FILE_INSTALL_FOLDER}")
+add_definitions(-DDARKNET_FILE_PATH="${DARKNET_FILE_INSTALL_FOLDER}")
 
 # Find CUDA
 find_package(CUDA QUIET)
@@ -229,6 +238,13 @@ install(DIRECTORY config/
 install(DIRECTORY yolo_network_config/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/yolo_network_config
   USE_SOURCE_PERMISSIONS
+)
+
+# Install images for labels
+install(DIRECTORY ${DARKNET_PATH}/data/labels/
+  DESTINATION ${DARKNET_FILE_INSTALL_FOLDER}/data/labels
+  USE_SOURCE_PERMISSIONS
+  FILES_MATCHING PATTERN "*.png"
 )
 
 # Install Manager Configuration
