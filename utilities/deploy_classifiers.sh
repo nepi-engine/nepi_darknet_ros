@@ -25,7 +25,7 @@ fi
 # Set the source path for classifier
 if [ -z "$SRC_PATH" ] || [ ! -d $SRC_PATH ]; then
 	read -e -p "Enter the path to the deployment folder (parent of config and yolo_network_config directories)
-	> " -i "$HOME/Downloads/" SRC_PATH
+	> " -i `pwd` SRC_PATH
 	if [ ! -d "$SRC_PATH/config" ] || [ ! -d "$SRC_PATH/yolo_network_config/cfg" ] || \
 	   [ ! -d "$SRC_PATH/yolo_network_config/weights" ]; then
 		echo "Error: $SRC_PATH does not have proper subdirectories... exiting"
