@@ -4,15 +4,15 @@
   <!-- Console launch prefix -->
   <arg name="launch_prefix" default=""/>
   <arg name="image" default="/camera/rgb/image_raw" />
-  <arg name="namespace" default="/numurus/dev_3dx/000000" />
+  <arg name="namespace" default="/nepi/dev_id/" />
 
   <!-- Config and weights folder. -->
-  <arg name="yolo_weights_path"          default="$(find num_darknet_ros)/yolo_network_config/weights"/>
-  <arg name="yolo_config_path"           default="$(find num_darknet_ros)/yolo_network_config/cfg"/>
+  <arg name="yolo_weights_path"          default="$(find nepi_darknet_ros)/yolo_network_config/weights"/>
+  <arg name="yolo_config_path"           default="$(find nepi_darknet_ros)/yolo_network_config/cfg"/>
 
   <!-- ROS and network parameter files -->
-  <arg name="ros_param_file"             default="$(find num_darknet_ros)/config/ros.yaml"/>
-  <arg name="network_param_file"         default="$(find num_darknet_ros)/config/yolov3-tiny.yaml"/>
+  <arg name="ros_param_file"             default="$(find nepi_darknet_ros)/config/ros.yaml"/>
+  <arg name="network_param_file"         default="$(find nepi_darknet_ros)/config/yolov3-tiny.yaml"/>
 
   <!-- Input image -->
   <arg name="input_img"                  default="$(arg namespace)/sensor_3dx/stereo_cam_mgr/img_0/image_raw"/>
@@ -21,11 +21,11 @@
   <arg name="detection_threshold"        default="0.3"/>
 
   <!-- Load parameters -->
-  <rosparam command="load" ns="$(arg namespace)/num_darknet_ros" file="$(arg ros_param_file)"/>
-  <rosparam command="load" ns="$(arg namespace)/num_darknet_ros" file="$(arg network_param_file)"/>
+  <rosparam command="load" ns="$(arg namespace)/nepi_darknet_ros" file="$(arg ros_param_file)"/>
+  <rosparam command="load" ns="$(arg namespace)/nepi_darknet_ros" file="$(arg network_param_file)"/>
 
   <!-- Start darknet and ros wrapper -->
-  <node pkg="num_darknet_ros" ns="$(arg namespace)" type="num_darknet_ros" name="num_darknet_ros" output="screen" launch-prefix="$(arg launch_prefix)">
+  <node pkg="nepi_darknet_ros" ns="$(arg namespace)" type="nepi_darknet_ros" name="nepi_darknet_ros" output="screen" launch-prefix="$(arg launch_prefix)">
     <param name="weights_path"          value="$(arg yolo_weights_path)" />
     <param name="config_path"           value="$(arg yolo_config_path)" />
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />

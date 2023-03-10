@@ -9,18 +9,18 @@ import subprocess
 import rospy
 
 from std_msgs.msg import Empty, Float32
-from num_sdk_msgs.srv import ImageClassifierListQuery, ImageClassifierListQueryResponse
-from num_sdk_msgs.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryResponse
-from num_sdk_msgs.msg import ClassifierSelection
+from nepi_ros_interfaces.srv import ImageClassifierListQuery, ImageClassifierListQueryResponse
+from nepi_ros_interfaces.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryResponse
+from nepi_ros_interfaces.msg import ClassifierSelection
 from darknet_ros_msgs.msg import ObjectCount
 from darknet_ros_msgs.msg import BoundingBoxes
 
-from num_sdk_base.save_cfg_if import SaveCfgIF
-from num_sdk_base.save_data_if import SaveDataIF
+from nepi_edge_sdk_base.save_cfg_if import SaveCfgIF
+from nepi_edge_sdk_base.save_data_if import SaveDataIF
 
 class DarknetRosMgr:
     NODE_NAME = "DarknetRosMgr"
-    DARKNET_CFG_PATH = '/opt/numurus/ros/share/num_darknet_ros/config/'
+    DARKNET_CFG_PATH = '/mnt/nepi_storage/ai_models/darknet_ros/'
     MIN_THRESHOLD = 0.001
     MAX_THRESHOLD = 1.0
 
@@ -85,7 +85,7 @@ class DarknetRosMgr:
             rospy.logerr("Unknown classifier requested: %s", classifier)
             return
 
-        classifier_cfg_file = self.DARKNET_CFG_PATH + classifier + ".yaml"
+        classifier_cfg_file = os.path.join(self.DARKNET_CFG_PATH, "config", classifier + ".yaml")
 
         # Validate the requested_detection threshold
         if (threshold < self.MIN_THRESHOLD or threshold > self.MAX_THRESHOLD):
@@ -96,13 +96,19 @@ class DarknetRosMgr:
         self.stop_classifier()
 
         # Build up the arg string for the new classifier launch command
-        namespace_arg = "namespace:=" + rospy.get_namespace();
-        network_param_file_arg = "network_param_file:=" + classifier_cfg_file
-        input_img_arg = "input_img:=" + input_img
-        detection_threshold_arg = "detection_threshold:=" + str(threshold)
+        launch_cmd_line = [
+            "roslaunch", "nepi_darknet_ros", "darknet_ros.launch",
+            "namespace:=" + rospy.get_namespace(), 
+            "yolo_weights_path:=" + os.path.join(self.DARKNET_CFG_PATH, "yolo_network_config/weights"),
+            "yolo_config_path:=" + os.path.join(self.DARKNET_CFG_PATH, "yolo_network_config/cfg"),
+            "ros_param_file:=" + os.path.join(self.DARKNET_CFG_PATH, "config/ros.yaml"),
+            "network_param_file:=" + os.path.join(self.DARKNET_CFG_PATH, "config", classifier + ".yaml"),
+            "input_img:=" + input_img,
+            "detection_threshold:=" + str(threshold)
+        ]
 
-        rospy.loginfo("Launching Darknet ROS Process: %s, %s, %s, %s", namespace_arg, network_param_file_arg, input_img_arg, detection_threshold_arg)
-        self.darknet_ros_process = subprocess.Popen(["roslaunch", "num_darknet_ros", "darknet_ros.launch", namespace_arg, network_param_file_arg, input_img_arg, detection_threshold_arg])
+        rospy.loginfo("Launching Darknet ROS Process: " + str(launch_cmd_line))
+        self.darknet_ros_process = subprocess.Popen(launch_cmd_line)
 
         # Update our local status
         self.current_classifier = classifier
@@ -154,26 +160,27 @@ class DarknetRosMgr:
         rospy.loginfo("Starting " + self.NODE_NAME + " Node")
         rospy.init_node(self.NODE_NAME)
 
+        darknet_cfg_path_config_folder = os.path.join(self.DARKNET_CFG_PATH, 'config')
         # Grab the list of all existing darknet cfg files
-        self.darknet_cfg_files = glob.glob(self.DARKNET_CFG_PATH + '*.yaml')
+        self.darknet_cfg_files = glob.glob(os.path.join(darknet_cfg_path_config_folder,'*.yaml'))
         # Remove the ros.yaml file -- that one doesn't represent a selectable trained neural net
         try:
-            self.darknet_cfg_files.remove(self.DARKNET_CFG_PATH + "ros.yaml")
+            self.darknet_cfg_files.remove(os.path.join(darknet_cfg_path_config_folder,'ros.yaml'))
         except:
-            rospy.logwarn("Unexpected: ros.yaml is missing from the darknet config path %s", self.DARKNET_CFG_PATH)
+            rospy.logwarn("Unexpected: ros.yaml is missing from the darknet config path %s", darknet_cfg_path_config_folder)
 
         for f in self.darknet_cfg_files:
             self.classifier_list.append(os.path.splitext(os.path.basename(f))[0])
 
         if (len(self.classifier_list) < 1):
-            rospy.logwarn("No classiers identified for this system at %s", self.DARKNET_CFG_PATH)
+            rospy.logwarn("No classiers identified for this system at %s", darknet_cfg_path_config_folder)
 
         rospy.Service('img_classifier_list_query', ImageClassifierListQuery, self.provide_classifier_list)
         rospy.Service('img_classifier_status_query', ImageClassifierStatusQuery, self.provide_classifier_status)
 
         rospy.Subscriber('start_classifier', ClassifierSelection, self.start_classifier_cb)
         rospy.Subscriber('stop_classifier', Empty, self.stop_classifier_cb)
-        rospy.Subscriber('num_darknet_ros/set_threshold', Float32, self.set_threshold_cb)
+        rospy.Subscriber('nepi_darknet_ros/set_threshold', Float32, self.set_threshold_cb)
 
         self.save_cfg_if = SaveCfgIF(updateParamsCallback=self.setCurrentSettingsAsDefault, paramsModifiedCallback=self.updateFromParamServer)
 

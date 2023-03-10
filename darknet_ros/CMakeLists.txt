@@ -1,21 +1,18 @@
 cmake_minimum_required(VERSION 2.8.12)
-project(num_darknet_ros)
+project(nepi_darknet_ros)
 
 # Set c++11 cmake flags
 set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-unused-result -Wno-unknown-pragmas -Wno-unused-variable -fPIC -fpermissive ${CMAKE_CXX_FLAGS}")
 
 # Define path of darknet folder here.
-find_path(DARKNET_PATH
-  NAMES "README.md"
-  HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../darknet/"
-)
+set(DARKNET_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../darknet/)
 
 # Data label images are installed below -- use that location for the compiled-in path to
 # avoid being dependent on the source folder at build time
 set( DARKNET_FILE_INSTALL_FOLDER
   # Must hard-code it because CATKIN_GLOBAL_SHARE_DESTINATION is not yet defined at this point
   # ${CATKIN_GLOBAL_SHARE_DESTINATION}/darknet
-  /opt/numurus/ros/share/darknet
+  /opt/nepi/ros/share/darknet
 )
 message(WARNING "Installing darknet files to hard-coded ${DARKNET_FILE_INSTALL_FOLDER}")
 add_definitions(-DDARKNET_FILE_PATH="${DARKNET_FILE_INSTALL_FOLDER}")
@@ -65,7 +62,7 @@ find_package(catkin REQUIRED
     actionlib
     darknet_ros_msgs
     image_transport
-    num_sdk_base
+    nepi_edge_sdk_base
 )
 
 # Enable OPENCV in darknet
@@ -203,7 +200,7 @@ add_dependencies(${PROJECT_NAME}_lib
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-    scripts/num_darknet_ros_mgr.py
+    scripts/nepi_darknet_ros_mgr.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -228,18 +225,6 @@ install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
 
-# Install ROS config files to the project share destination
-install(DIRECTORY config/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
-  USE_SOURCE_PERMISSIONS
-)
-
-# Install Weights and Network Configs
-install(DIRECTORY yolo_network_config/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/yolo_network_config
-  USE_SOURCE_PERMISSIONS
-)
-
 # Install images for labels
 install(DIRECTORY ${DARKNET_PATH}/data/labels/
   DESTINATION ${DARKNET_FILE_INSTALL_FOLDER}/data/labels
@@ -249,7 +234,7 @@ install(DIRECTORY ${DARKNET_PATH}/data/labels/
 
 # Install Manager Configuration
 install(DIRECTORY etc/
-  DESTINATION ${CATKIN_GLOBAL_ETC_DESTINATION}/num_darknet_ros_mgr
+  DESTINATION ${CATKIN_GLOBAL_ETC_DESTINATION}/nepi_darknet_ros_mgr
   USE_SOURCE_PERMISSIONS
 )
 
@@ -262,8 +247,24 @@ install(DIRECTORY etc/
 #  execute_process(COMMAND wget http://pjreddie.com/media/files/yolov2-tiny.weights -P ${PATH})
 # endif()
 
+# Set up the path for the darknet ros model and weights files
+set(NEPI_DARKNET_ROS_MODEL_PATH "/mnt/nepi_storage/ai_models/darknet_ros")
+file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH})
+
+# Install ROS config files to the project share destination
+install(DIRECTORY config/
+  DESTINATION ${NEPI_DARKNET_ROS_MODEL_PATH}/config
+  USE_SOURCE_PERMISSIONS
+)
+
+# Install Weights and Network Configs
+install(DIRECTORY yolo_network_config/
+  DESTINATION ${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config
+  USE_SOURCE_PERMISSIONS
+)
+
 # Download yolov3.weights
-set(PATH "${CMAKE_CURRENT_SOURCE_DIR}/yolo_network_config/weights")
+set(PATH "${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config/weights")
 set(FILE "${PATH}/yolov3.weights")
 message(STATUS "Checking and downloading yolov3.weights if needed ...")
 if (NOT EXISTS "${FILE}")
@@ -279,29 +280,3 @@ if (NOT EXISTS "${FILE}")
   execute_process(COMMAND wget http://pjreddie.com/media/files/yolov3-tiny.weights -P ${PATH})
 endif()
 
-#############
-## Testing ##
-#############
-
-if(CATKIN_ENABLE_TESTING)
-  # Download yolov2.weights
-  set(PATH "${CMAKE_CURRENT_SOURCE_DIR}/yolo_network_config/weights")
-  set(FILE "${PATH}/yolov2.weights")
-  message(STATUS "Checking and downloading yolov2.weights if needed ...")
-  if (NOT EXISTS "${FILE}")
-    message(STATUS "... file does not exist. Downloading now ...")
-    execute_process(COMMAND wget http://pjreddie.com/media/files/yolov2.weights -P ${PATH})
-  endif()
-
-  find_package(rostest REQUIRED)
-
-  # Object detection in images.
-  add_rostest_gtest(${PROJECT_NAME}_object_detection-test
-    test/object_detection.test
-    test/test_main.cpp
-    test/ObjectDetection.cpp
-  )
-  target_link_libraries(${PROJECT_NAME}_object_detection-test
-    ${catkin_LIBRARIES}
-  )
-endif()
