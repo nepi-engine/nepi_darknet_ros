@@ -180,7 +180,7 @@ class DarknetRosMgr:
 
         rospy.Subscriber('start_classifier', ClassifierSelection, self.start_classifier_cb)
         rospy.Subscriber('stop_classifier', Empty, self.stop_classifier_cb)
-        rospy.Subscriber('nepi_darknet_ros/set_threshold', Float32, self.set_threshold_cb)
+        rospy.Subscriber('nepi_darknet_ros/set_threshold', Float32, self.set_threshold_cb) # Must match the node that gets launched by start_classifier()
 
         self.save_cfg_if = SaveCfgIF(updateParamsCallback=self.setCurrentSettingsAsDefault, paramsModifiedCallback=self.updateFromParamServer)
 
