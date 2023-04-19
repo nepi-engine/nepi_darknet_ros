@@ -10,7 +10,7 @@ import rospy
 
 from std_msgs.msg import Empty, Float32
 from nepi_ros_interfaces.srv import ImageClassifierListQuery, ImageClassifierListQueryResponse
-from nepi_ros_interfaces.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryResponse
+from nepi_ros_interfaces.srv import ImageClassifierStatusQuery, ImageClassifierStatusQueryResponse, SystemStorageFolderQuery
 from nepi_ros_interfaces.msg import ClassifierSelection
 from darknet_ros_msgs.msg import ObjectCount
 from darknet_ros_msgs.msg import BoundingBoxes
@@ -85,8 +85,6 @@ class DarknetRosMgr:
             rospy.logerr("Unknown classifier requested: %s", classifier)
             return
 
-        classifier_cfg_file = os.path.join(self.DARKNET_CFG_PATH, "config", classifier + ".yaml")
-
         # Validate the requested_detection threshold
         if (threshold < self.MIN_THRESHOLD or threshold > self.MAX_THRESHOLD):
             rospy.logerr("Requested detection threshold (%f) out of range (0.001 - 1.0)", threshold)
@@ -160,6 +158,14 @@ class DarknetRosMgr:
         rospy.loginfo("Starting " + self.NODE_NAME + " Node")
         rospy.init_node(self.NODE_NAME)
 
+        # Try to obtain the path to Darknet models from the system_mgr
+        try:
+            rospy.wait_for_service('system_storage_folder_query', 10.0)
+            system_storage_folder_query = rospy.ServiceProxy('system_storage_folder_query', SystemStorageFolderQuery)
+            self.DARKNET_CFG_PATH = os.path.join(system_storage_folder_query('ai_models').folder_path, 'darknet_ros')
+        except Exception as e:
+            rospy.logwarn("Failed to obtain system ai_models/darknet_ros folder... falling back to " + self.DARKNET_CFG_PATH)
+                
         darknet_cfg_path_config_folder = os.path.join(self.DARKNET_CFG_PATH, 'config')
         # Grab the list of all existing darknet cfg files
         self.darknet_cfg_files = glob.glob(os.path.join(darknet_cfg_path_config_folder,'*.yaml'))
