@@ -5,6 +5,7 @@ import os.path
 import errno
 import glob
 import subprocess
+import yaml
 
 import rospy
 
@@ -23,14 +24,18 @@ class DarknetRosMgr:
     DARKNET_CFG_PATH = '/mnt/nepi_storage/ai_models/darknet_ros/'
     MIN_THRESHOLD = 0.001
     MAX_THRESHOLD = 1.0
+    FIXED_LOADING_START_UP_TIME_S = 5.0 # Total guess
+    ESTIMATED_WEIGHT_LOAD_RATE_BYTES_PER_SECOND = 16000000.0 # Very roughly empirical based on YOLOv3
 
     darknet_cfg_files = []
     classifier_list = []
+    classifier_weights_sizes = {}
 
     current_classifier = "None"
     current_img_topic = "None"
     current_threshold = 0.3
     classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_STOPPED
+    classifier_load_start_time = None
 
     darknet_ros_process = None
 
@@ -40,7 +45,19 @@ class DarknetRosMgr:
         return ImageClassifierListQueryResponse(self.classifier_list)
 
     def provide_classifier_status(self, req):
-        return [self.current_img_topic, self.current_classifier, self.classifier_state, self.current_threshold]
+        # Update the loading progress if necessary
+        loading_progress = 0.0
+        if (self.classifier_state == ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_RUNNING):
+            loading_progress = 1.0
+        elif (self.classifier_state == ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_LOADING):
+            loading_elapsed_s = (rospy.Time.now() - self.classifier_load_start_time).to_sec()
+            estimated_load_time_s = self.FIXED_LOADING_START_UP_TIME_S + (self.classifier_weights_sizes[self.current_classifier] / self.ESTIMATED_WEIGHT_LOAD_RATE_BYTES_PER_SECOND)
+            if loading_elapsed_s > estimated_load_time_s:
+                loading_progress = 0.95 # Stall at 95%
+            else:
+                loading_progress = loading_elapsed_s / estimated_load_time_s
+    
+        return [self.current_img_topic, self.current_classifier, self.classifier_state, loading_progress, self.current_threshold]
 
     def stop_classifier(self):
         rospy.loginfo("Stopping classifier")
@@ -113,6 +130,7 @@ class DarknetRosMgr:
         self.current_img_topic = input_img
         self.current_threshold = threshold
         self.classifier_state = ImageClassifierStatusQueryResponse.CLASSIFIER_STATE_LOADING
+        self.classifier_load_start_time = rospy.Time.now()
 
         # Resubscribe to found_object so that we know when the classifier is up and running again
         self.found_object_sub = rospy.Subscriber('classifier/found_object', ObjectCount, self.got_darknet_update)
@@ -176,8 +194,24 @@ class DarknetRosMgr:
             rospy.logwarn("Unexpected: ros.yaml is missing from the darknet config path %s", darknet_cfg_path_config_folder)
 
         for f in self.darknet_cfg_files:
-            self.classifier_list.append(os.path.splitext(os.path.basename(f))[0])
+            yaml_stream = open(f, 'r')
+            # Validate that it is a proper config file and gather weights file size info for load-time estimates
+            cfg_dict = yaml.load(yaml_stream)
+            yaml_stream.close()
+            if ("yolo_model" not in cfg_dict) or ("weight_file" not in cfg_dict["yolo_model"]) or ("name" not in cfg_dict["yolo_model"]["weight_file"]):
+                rospy.logerr("Debug: " + str(cfg_dict))
+                rospy.logwarn("File does not appear to be a valid A/I model config file: " + f + "... not adding this classifier")
+                continue
 
+            classifier_name = os.path.splitext(os.path.basename(f))[0]
+            weight_file = os.path.join(self.DARKNET_CFG_PATH, "yolo_network_config", "weights",cfg_dict["yolo_model"]["weight_file"]["name"])
+            if not os.path.exists(weight_file):
+                rospy.logwarn("Classifier " + classifier_name + " specifies non-existent weights file " + weight_file + "... not adding this classifier")
+                continue
+
+            self.classifier_list.append(classifier_name)
+            self.classifier_weights_sizes[classifier_name] = os.path.getsize(weight_file)
+        
         if (len(self.classifier_list) < 1):
             rospy.logwarn("No classiers identified for this system at %s", darknet_cfg_path_config_folder)
 
