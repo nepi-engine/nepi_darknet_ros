@@ -277,8 +277,11 @@ bool YoloObjectDetector::publishDetectionImage(const cv::Mat& detectionImage)
   if (detectionImagePublisher_.getNumSubscribers() < 1)
     return false;
   cv_bridge::CvImage cvImage;
-  cvImage.header.stamp = ros::Time::now();
-  cvImage.header.frame_id = "detection_image";
+  //cvImage.header.stamp = ros::Time::now();
+  //cvImage.header.frame_id = "detection_image";
+  // Preserve some header fields from the original image
+  cvImage.header.stamp = headerBuff_[buffIndex_].stamp;
+  cvImage.header.frame_id = headerBuff_[buffIndex_].frame_id;
   cvImage.encoding = sensor_msgs::image_encodings::BGR8;
   cvImage.image = detectionImage;
   detectionImagePublisher_.publish(*cvImage.toImageMsg());
@@ -625,8 +628,11 @@ void *YoloObjectDetector::publishInThread()
     }
 
     darknet_ros_msgs::ObjectCount msg;
-    msg.header.stamp = ros::Time::now();
-    msg.header.frame_id = "detection";
+    //msg.header.stamp = ros::Time::now();
+    //msg.header.frame_id = "detection";
+    // Preserve some header fields from the original image
+    msg.header.stamp = headerBuff_[buffIndex_].stamp;
+    msg.header.frame_id = headerBuff_[buffIndex_].frame_id;
     msg.count = num;
     objectPublisher_.publish(msg);
 
