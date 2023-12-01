@@ -238,45 +238,9 @@ install(DIRECTORY etc/
   USE_SOURCE_PERMISSIONS
 )
 
-# Download yolov2-tiny.weights
-# set(PATH "${CMAKE_CURRENT_SOURCE_DIR}/yolo_network_config/weights")
-# set(FILE "${PATH}/yolov2-tiny.weights")
-# message(STATUS "Checking and downloading yolov2-tiny.weights if needed ...")
-# if (NOT EXISTS "${FILE}")
-#  message(STATUS "... file does not exist. Downloading now ...")
-#  execute_process(COMMAND wget http://pjreddie.com/media/files/yolov2-tiny.weights -P ${PATH})
-# endif()
-
 # Set up the path for the darknet ros model and weights files
 set(NEPI_DARKNET_ROS_MODEL_PATH "/mnt/nepi_storage/ai_models/darknet_ros")
 file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH})
-
-# Install ROS config files to the project share destination
-install(DIRECTORY config/
-  DESTINATION ${NEPI_DARKNET_ROS_MODEL_PATH}/config
-  USE_SOURCE_PERMISSIONS
-)
-
-# Install Weights and Network Configs
-install(DIRECTORY yolo_network_config/
-  DESTINATION ${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config
-  USE_SOURCE_PERMISSIONS
-)
-
-# Download yolov3.weights
-set(PATH "${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config/weights")
-set(FILE "${PATH}/yolov3.weights")
-message(STATUS "Checking and downloading yolov3.weights if needed ...")
-if (NOT EXISTS "${FILE}")
-  message(STATUS "... file does not exist. Downloading now ...")
-  execute_process(COMMAND wget http://pjreddie.com/media/files/yolov3.weights -P ${PATH})
-endif()
-
-# Download yolov3-tiny.weights
-set(FILE "${PATH}/yolov3-tiny.weights")
-message(STATUS "Checking and downloading yolov3-tiny.weights if needed ...")
-if (NOT EXISTS "${FILE}")
-  message(STATUS "... file does not exist. Downloading now ...")
-  execute_process(COMMAND wget http://pjreddie.com/media/files/yolov3-tiny.weights -P ${PATH})
-endif()
-
+file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH}/config)
+file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config)
+file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config/weights)
