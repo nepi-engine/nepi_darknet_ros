@@ -237,10 +237,3 @@ install(DIRECTORY etc/
   DESTINATION ${CATKIN_GLOBAL_ETC_DESTINATION}/nepi_darknet_ros_mgr
   USE_SOURCE_PERMISSIONS
 )
-
-# Set up the path for the darknet ros model and weights files
-set(NEPI_DARKNET_ROS_MODEL_PATH "/mnt/nepi_storage/ai_models/darknet_ros")
-file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH})
-file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH}/config)
-file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config)
-file(MAKE_DIRECTORY ${NEPI_DARKNET_ROS_MODEL_PATH}/yolo_network_config/weights)
