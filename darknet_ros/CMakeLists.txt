@@ -197,13 +197,6 @@ add_dependencies(${PROJECT_NAME}_lib
   darknet_ros_msgs_generate_messages_cpp
 )
 
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-install(PROGRAMS
-    scripts/nepi_darknet_ros_mgr.py
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
 install(TARGETS ${PROJECT_NAME}_lib
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -232,8 +225,3 @@ install(DIRECTORY ${DARKNET_PATH}/data/labels/
   FILES_MATCHING PATTERN "*.png"
 )
 
-# Install Manager Configuration
-install(DIRECTORY etc/
-  DESTINATION ${CATKIN_GLOBAL_ETC_DESTINATION}/nepi_darknet_ros_mgr
-  USE_SOURCE_PERMISSIONS
-)
