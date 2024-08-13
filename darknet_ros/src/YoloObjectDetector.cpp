@@ -614,6 +614,9 @@ void *YoloObjectDetector::publishInThread()
   if (!publishDetectionImage(cv::Mat(cvImage))) {
     ROS_DEBUG("Detection image has not been broadcasted.");
   }
+  std::string cameraTopicName;
+  nodeHandle_.param("subscribers/camera_reading/topic", cameraTopicName,
+                    std::string("/camera/image_raw"));
 
   // Publish bounding boxes and detection result.
   int num = roiBoxes_[0].num;
@@ -660,6 +663,7 @@ void *YoloObjectDetector::publishInThread()
     boundingBoxesResults_.header.stamp = ros::Time::now();
     boundingBoxesResults_.header.frame_id = "detection";
     boundingBoxesResults_.image_header = headerBuff_[(buffIndex_ + 1) % 3];
+    boundingBoxesResults_.image_topic = cameraTopicName;
     boundingBoxesPublisher_.publish(boundingBoxesResults_);
   } else {
     darknet_ros_msgs::ObjectCount msg;

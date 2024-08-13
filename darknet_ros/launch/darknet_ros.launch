@@ -17,8 +17,8 @@
   <!-- Input image -->
   <arg name="input_img"                  default="$(arg namespace)/sensor_3dx/stereo_cam_mgr/img_0/image_raw"/>
 
-  <!-- Detection threshold -->
-  <arg name="detection_threshold"        default="0.3"/>
+  <!-- detector threshold -->
+  <arg name="detector_threshold"        default="0.3"/>
 
   <!-- Load parameters -->
   <rosparam command="load" ns="$(arg namespace)/nepi_darknet_ros" file="$(arg ros_param_file)"/>
@@ -29,10 +29,10 @@
     <param name="weights_path"          value="$(arg yolo_weights_path)" />
     <param name="config_path"           value="$(arg yolo_config_path)" />
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
-    <param name="yolo_model/threshold/value" value="$(arg detection_threshold)" />
-    <param name="publishers/detection_image/topic" value="$(arg namespace)/classifier/detection_image" />
-    <param name="publishers/object_detector/topic" value="$(arg namespace)/classifier/found_object" />
-    <param name="publishers/bounding_boxes/topic" value="$(arg namespace)/classifier/bounding_boxes" />
+    <param name="yolo_model/threshold/value" value="$(arg detector_threshold)" />
+    <param name="publishers/detection_image/topic" value="$(arg namespace)/ai_detector_mgr/detection_image" />
+    <param name="publishers/object_detector/topic" value="$(arg namespace)/ai_detector_mgr/found_object" />
+    <param name="publishers/bounding_boxes/topic" value="$(arg namespace)/ai_detector_mgr/bounding_boxes" />
     <remap from="camera/rgb/image_raw"  to="$(arg image)" />
   </node>
 
