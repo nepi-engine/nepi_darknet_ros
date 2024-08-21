@@ -167,7 +167,8 @@ class YoloObjectDetector
   int frameWidth_;
   int frameHeight_;
 
-  //! Publisher of the bounding box image.
+  //! Publisher of the source and bounding box image.
+  ros::Publisher sourceImagePublisher_;
   ros::Publisher detectionImagePublisher_;
 
   // Yolo running on thread.

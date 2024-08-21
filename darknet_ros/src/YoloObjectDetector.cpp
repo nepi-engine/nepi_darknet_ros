@@ -128,6 +128,9 @@ void YoloObjectDetector::init()
   yoloThread_ = std::thread(&YoloObjectDetector::yolo, this);
 
   // Initialize publisher and subscriber.
+  std::string sourceImageTopicName;
+  int sourceImageQueueSize;
+  bool sourceImageLatch;
   std::string cameraTopicName;
   int cameraQueueSize;
   std::string objectDetectorTopicName;
@@ -140,6 +143,12 @@ void YoloObjectDetector::init()
   int detectionImageQueueSize;
   bool detectionImageLatch;
 
+
+
+  nodeHandle_.param("publishers/source_image/topic", sourceImageTopicName,
+                    std::string("source_image"));
+  nodeHandle_.param("publishers/source_image/queue_size", sourceImageQueueSize, 1);
+  nodeHandle_.param("publishers/source_image/latch", sourceImageLatch, true); 
   nodeHandle_.param("subscribers/camera_reading/topic", cameraTopicName,
                     std::string("/camera/image_raw"));
   nodeHandle_.param("subscribers/camera_reading/queue_size", cameraQueueSize, 1);
@@ -155,7 +164,11 @@ void YoloObjectDetector::init()
                     std::string("detection_image"));
   nodeHandle_.param("publishers/detection_image/queue_size", detectionImageQueueSize, 1);
   nodeHandle_.param("publishers/detection_image/latch", detectionImageLatch, true);
+ 
 
+  sourceImagePublisher_ = nodeHandle_.advertise<sensor_msgs::Image>(sourceImageTopicName,
+                                                                       sourceImageQueueSize,
+                                                                       sourceImageLatch);
   imageSubscriber_ = imageTransport_.subscribe(cameraTopicName, cameraQueueSize,
                                                &YoloObjectDetector::cameraCallback, this);
   setThresholdSubscriber_ = nodeHandle_.subscribe("set_threshold", 1, &YoloObjectDetector::setThresholdCallback, this);
@@ -206,6 +219,9 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg)
     }
     frameWidth_ = cam_image->image.size().width;
     frameHeight_ = cam_image->image.size().height;
+    if (detectionImagePublisher_.getNumSubscribers() < 1)
+      return;
+    sourceImagePublisher_.publish(msg);
   }
   return;
 }
@@ -272,6 +288,8 @@ bool YoloObjectDetector::isCheckingForObjects() const
   return (ros::ok() && checkForObjectsActionServer_->isActive()
       && !checkForObjectsActionServer_->isPreemptRequested());
 }
+
+
 
 bool YoloObjectDetector::publishDetectionImage(const cv::Mat& detectionImage)
 {
