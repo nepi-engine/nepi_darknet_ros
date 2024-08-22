@@ -3,19 +3,21 @@
 <launch>
   <!-- Console launch prefix -->
   <arg name="launch_prefix" default=""/>
-  <arg name="image" default="/camera/rgb/image_raw" />
+  <arg name="image" default="camera/rgb/image_raw" />
   <arg name="namespace" default="/nepi/dev_id/" />
 
   <!-- Config and weights folder. -->
   <arg name="yolo_weights_path"          default="$(find nepi_darknet_ros)/yolo_network_config/weights"/>
   <arg name="yolo_config_path"           default="$(find nepi_darknet_ros)/yolo_network_config/cfg"/>
-
+  
   <!-- ROS and network parameter files -->
   <arg name="ros_param_file"             default="$(find nepi_darknet_ros)/config/ros.yaml"/>
   <arg name="network_param_file"         default="$(find nepi_darknet_ros)/config/yolov3-tiny.yaml"/>
 
   <!-- Input image -->
-  <arg name="input_img"                  default="$(arg namespace)/sensor_3dx/stereo_cam_mgr/img_0/image_raw"/>
+  <arg name="input_img"                  default="$(arg namespace)/idx/color_2d_image"/>
+  <arg name="input_depth_map"                  default="$(arg namespace)/idx/depth_map"/>
+  <arg name="input_pointcloud"                  default="$(arg namespace)/pointcloud"/>
 
   <!-- detector threshold -->
   <arg name="detector_threshold"        default="0.3"/>
@@ -31,6 +33,8 @@
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
     <param name="yolo_model/threshold/value" value="$(arg detector_threshold)" />
     <param name="publishers/source_image/topic" value="$(arg namespace)/ai_detector_mgr/source_image" />
+    <param name="publishers/source_depth_map/topic" value="$(arg namespace)/ai_detector_mgr/source_depth_map" />
+    <param name="publishers/source_pointcloud/topic" value="$(arg namespace)/ai_detector_mgr/source_pointcloud" />
     <param name="publishers/detection_image/topic" value="$(arg namespace)/ai_detector_mgr/detection_image" />
     <param name="publishers/object_detector/topic" value="$(arg namespace)/ai_detector_mgr/found_object" />
     <param name="publishers/bounding_boxes/topic" value="$(arg namespace)/ai_detector_mgr/bounding_boxes" />
