@@ -147,7 +147,6 @@ void YoloObjectDetector::init()
 
   nodeHandle_.param("publishers/source_image/topic", sourceImageTopicName,
                     std::string("source_image"));
-  nodeHandle_.param("publishers/source_image/queue_size", sourceImageQueueSize, 1);
   nodeHandle_.param("publishers/source_image/latch", sourceImageLatch, true); 
   nodeHandle_.param("subscribers/camera_reading/topic", cameraTopicName,
                     std::string("/camera/image_raw"));
@@ -165,6 +164,8 @@ void YoloObjectDetector::init()
   nodeHandle_.param("publishers/detection_image/queue_size", detectionImageQueueSize, 1);
   nodeHandle_.param("publishers/detection_image/latch", detectionImageLatch, true);
  
+  sourceImageQueueSize = 1;
+  detectionImageQueueSize = 1;
 
   sourceImagePublisher_ = nodeHandle_.advertise<sensor_msgs::Image>(sourceImageTopicName,
                                                                        sourceImageQueueSize,
