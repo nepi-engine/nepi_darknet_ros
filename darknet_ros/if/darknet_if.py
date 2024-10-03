@@ -135,7 +135,7 @@ class DarknetAIF(object):
         #self.current_threshold = 0.3
 
     def updateClassifierThreshold(self,threshold):
-        set_threshold_pub.publish(theshold)
+        self.set_threshold_pub.publish(threshold)
 
 
     
