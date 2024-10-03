@@ -30,10 +30,10 @@
     <param name="config_path"           value="$(arg yolo_config_path)" />
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
     <param name="yolo_model/threshold/value" value="$(arg detector_threshold)" />
-    <param name="publishers/source_image/topic" value="$(arg namespace)/ai_detector_mgr/source_image" />
-    <param name="publishers/detection_image/topic" value="$(arg namespace)/ai_detector_mgr/detection_image" />
-    <param name="publishers/object_detector/topic" value="$(arg namespace)/ai_detector_mgr/found_object" />
-    <param name="publishers/bounding_boxes/topic" value="$(arg namespace)/ai_detector_mgr/bounding_boxes" />
+    <param name="publishers/source_image/topic" value="$(arg namespace)/source_image" />
+    <param name="publishers/detection_image/topic" value="$(arg namespace)/detection_image" />
+    <param name="publishers/object_detector/topic" value="$(arg namespace)/found_object" />
+    <param name="publishers/bounding_boxes/topic" value="$(arg namespace)/bounding_boxes" />
     <remap from="camera/rgb/image_raw"  to="$(arg image)" />
   </node>
 
