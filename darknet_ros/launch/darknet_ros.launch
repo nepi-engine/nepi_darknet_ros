@@ -16,8 +16,6 @@
 
   <!-- Input image -->
   <arg name="input_img"                  default="$(arg namespace)/idx/color_2d_image"/>
-  <arg name="input_depth_map"                  default="$(arg namespace)/idx/depth_map"/>
-  <arg name="input_pointcloud"                  default="$(arg namespace)/pointcloud"/>
 
   <!-- detector threshold -->
   <arg name="detector_threshold"        default="0.3"/>
@@ -33,8 +31,6 @@
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
     <param name="yolo_model/threshold/value" value="$(arg detector_threshold)" />
     <param name="publishers/source_image/topic" value="$(arg namespace)/ai_detector_mgr/source_image" />
-    <param name="publishers/source_depth_map/topic" value="$(arg namespace)/ai_detector_mgr/source_depth_map" />
-    <param name="publishers/source_pointcloud/topic" value="$(arg namespace)/ai_detector_mgr/source_pointcloud" />
     <param name="publishers/detection_image/topic" value="$(arg namespace)/ai_detector_mgr/detection_image" />
     <param name="publishers/object_detector/topic" value="$(arg namespace)/ai_detector_mgr/found_object" />
     <param name="publishers/bounding_boxes/topic" value="$(arg namespace)/ai_detector_mgr/bounding_boxes" />
