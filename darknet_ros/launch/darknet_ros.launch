@@ -7,8 +7,8 @@
   <arg name="namespace" default="/nepi/dev_id/" />
 
   <!-- Config and weights folder. -->
-  <arg name="yolo_weights_path"          default="$(find nepi_darknet_ros)/yolo_network_config/weights"/>
-  <arg name="yolo_config_path"           default="$(find nepi_darknet_ros)/yolo_network_config/cfg"/>
+  <arg name="weights_path"          default="$(find nepi_darknet_ros)/yolo_network_config/weights"/>
+  <arg name="config_path"           default="$(find nepi_darknet_ros)/yolo_network_config/cfg"/>
   
   <!-- ROS and network parameter files -->
   <arg name="ros_param_file"             default="$(find nepi_darknet_ros)/config/ros.yaml"/>
@@ -26,8 +26,8 @@
 
   <!-- Start darknet and ros wrapper -->
   <node pkg="nepi_darknet_ros" ns="$(arg namespace)" type="nepi_darknet_ros" name="nepi_darknet_ros" output="screen" launch-prefix="$(arg launch_prefix)">
-    <param name="weights_path"          value="$(arg yolo_weights_path)" />
-    <param name="config_path"           value="$(arg yolo_config_path)" />
+    <param name="weights_path"          value="$(arg weights_path)" />
+    <param name="config_path"           value="$(arg config_path)" />
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
     <param name="yolo_model/threshold/value" value="$(arg detector_threshold)" />
     <param name="publishers/source_image/topic" value="$(arg namespace)/source_image" />

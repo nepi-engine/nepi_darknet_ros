@@ -225,13 +225,5 @@ install(DIRECTORY ${DARKNET_PATH}/data/labels/
   FILES_MATCHING PATTERN "*.png"
 )
 
-## Mark other files for installation (e.g. launch and bag files, etc.)
-set( NEPI_AI_IF_FOLDER 
-  # Must hard-coded 
-  /opt/nepi/ros/share/nepi_ai_ifs
-)
 
-install(DIRECTORY if/
-  DESTINATION ${NEPI_AI_IF_FOLDER}
-)
 
