@@ -2,35 +2,37 @@
 
 <launch>
   <!-- Console launch prefix -->
+  <arg name="pkg_name" default="nepi_darknet_ros"/>
+  <arg name="node_name" default="darknet_ros"/>
+  <arg name="node_file" default="nepi_darknet_ros"/>
   <arg name="launch_prefix" default=""/>
-  <arg name="image" default="camera/rgb/image_raw" />
+  <arg name="image" default="/camera/rgb/image_raw" />
   <arg name="namespace" default="/nepi/dev_id/" />
 
   <!-- Config and weights folder. -->
-  <arg name="weights_path"          default="$(find nepi_darknet_ros)/yolo_network_config/weights"/>
-  <arg name="config_path"           default="$(find nepi_darknet_ros)/yolo_network_config/cfg"/>
-  
+  <arg name="yolo_weights_path"          default="/mnt/nepi_storage/ai_models/darknet_ros/yolo_network_config/weights"/>
+  <arg name="yolo_config_path"           default="/mnt/nepi_storage/ai_models/darknet_ros/yolo_network_config/cfg"/>
+
   <!-- ROS and network parameter files -->
-  <arg name="ros_param_file"             default="$(find nepi_darknet_ros)/config/ros.yaml"/>
-  <arg name="network_param_file"         default="$(find nepi_darknet_ros)/config/yolov3-tiny.yaml"/>
+  <arg name="ros_param_file"             default="/mnt/nepi_storage/ai_models/darknet_ros/config/ros.yaml"/>
+  <arg name="network_param_file"         default="/mnt/nepi_storage/ai_models/darknet_ros/config/common_object_detection_fast.yaml"/>
 
   <!-- Input image -->
-  <arg name="input_img"                  default="$(arg namespace)/idx/color_2d_image"/>
+  <arg name="input_img"                  default="$(arg namespace)/image_raw"/>
 
-  <!-- detector threshold -->
-  <arg name="detector_threshold"        default="0.3"/>
+  <!-- Detection threshold -->
+  <arg name="detection_threshold"        default="0.3"/>
 
   <!-- Load parameters -->
-  <rosparam command="load" ns="$(arg namespace)/nepi_darknet_ros" file="$(arg ros_param_file)"/>
-  <rosparam command="load" ns="$(arg namespace)/nepi_darknet_ros" file="$(arg network_param_file)"/>
+  <rosparam command="load" ns="$(arg namespace)/$(arg node_name)" file="$(arg ros_param_file)"/>
+  <rosparam command="load" ns="$(arg namespace)/$(arg node_name)" file="$(arg network_param_file)"/>
 
   <!-- Start darknet and ros wrapper -->
-  <node pkg="nepi_darknet_ros" ns="$(arg namespace)" type="nepi_darknet_ros" name="nepi_darknet_ros" output="screen" launch-prefix="$(arg launch_prefix)">
-    <param name="weights_path"          value="$(arg weights_path)" />
-    <param name="config_path"           value="$(arg config_path)" />
+  <node pkg="$(arg pkg_name)" ns="$(arg namespace)" type="$(arg node_file)" name="$(arg node_name)" output="screen" launch-prefix="$(arg launch_prefix)">
+    <param name="weights_path"          value="$(arg yolo_weights_path)" />
+    <param name="config_path"           value="$(arg yolo_config_path)" />
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
-    <param name="yolo_model/threshold/value" value="$(arg detector_threshold)" />
-    <param name="publishers/source_image/topic" value="$(arg namespace)/source_image" />
+    <param name="yolo_model/threshold/value" value="$(arg detection_threshold)" />
     <param name="publishers/detection_image/topic" value="$(arg namespace)/detection_image" />
     <param name="publishers/object_detector/topic" value="$(arg namespace)/found_object" />
     <param name="publishers/bounding_boxes/topic" value="$(arg namespace)/bounding_boxes" />
