@@ -129,6 +129,7 @@ void YoloObjectDetector::init()
 
   // Initialize publisher and subscriber.
   std::string sourceImageTopicName;
+  std::string setThresholdTopicName;
   int sourceImageQueueSize;
   bool sourceImageLatch;
   std::string cameraTopicName;
@@ -147,6 +148,9 @@ void YoloObjectDetector::init()
 
   nodeHandle_.param("publishers/source_image/topic", sourceImageTopicName,
                     std::string("source_image"));
+  nodeHandle_.param("subscribers/threshold/topic", setThresholdTopicName,
+                    std::string("set_threshold"));       
+                              
   nodeHandle_.param("publishers/source_image/latch", sourceImageLatch, true); 
   nodeHandle_.param("subscribers/camera_reading/topic", cameraTopicName,
                     std::string("/camera/image_raw"));
@@ -172,7 +176,7 @@ void YoloObjectDetector::init()
                                                                        sourceImageLatch);
   imageSubscriber_ = imageTransport_.subscribe(cameraTopicName, cameraQueueSize,
                                                &YoloObjectDetector::cameraCallback, this);
-  setThresholdSubscriber_ = nodeHandle_.subscribe("set_threshold", 1, &YoloObjectDetector::setThresholdCallback, this);
+  setThresholdSubscriber_ = nodeHandle_.subscribe(setThresholdTopicName, 1, &YoloObjectDetector::setThresholdCallback, this);
   objectPublisher_ = nodeHandle_.advertise<darknet_ros_msgs::ObjectCount>(objectDetectorTopicName,
                                                                             objectDetectorQueueSize,
                                                                             objectDetectorLatch);
@@ -239,6 +243,7 @@ void YoloObjectDetector::setThresholdCallback(const std_msgs::Float32::ConstPtr&
     // Avoid setting threshold to 0 -- use an epsilon instead
     boost::unique_lock<boost::shared_mutex> lockThreshold(mutexThreshold_);
     demoThresh_ = (new_thresh == 0.0f)? 0.01 : new_thresh;
+    ROS_INFO("YoloObjectDetector threshold set to %f", demoThresh_);
   }
 }
 
