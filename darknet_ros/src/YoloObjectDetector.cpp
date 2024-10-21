@@ -673,6 +673,9 @@ void *YoloObjectDetector::publishInThread()
           int ymin = (rosBoxes_[i][j].y - rosBoxes_[i][j].h / 2) * frameHeight_;
           int xmax = (rosBoxes_[i][j].x + rosBoxes_[i][j].w / 2) * frameWidth_;
           int ymax = (rosBoxes_[i][j].y + rosBoxes_[i][j].h / 2) * frameHeight_;
+          float area_img = frameWidth_ * frameHeight_;
+          float area_pixels = (xmax-xmin)*(ymax-ymin);
+          float area_ratio = area_pixels / area_img;
 
           boundingBox.Class = classLabels_[i];
           boundingBox.id = i;
@@ -681,6 +684,8 @@ void *YoloObjectDetector::publishInThread()
           boundingBox.ymin = ymin;
           boundingBox.xmax = xmax;
           boundingBox.ymax = ymax;
+          boundingBox.area_ratio = area_ratio;
+          boundingBox.area_pixels = area_pixels;
           boundingBoxesResults_.bounding_boxes.push_back(boundingBox);
         }
       }
@@ -689,6 +694,8 @@ void *YoloObjectDetector::publishInThread()
     boundingBoxesResults_.header.frame_id = "detection";
     boundingBoxesResults_.image_header = headerBuff_[(buffIndex_ + 1) % 3];
     boundingBoxesResults_.image_topic = cameraTopicName;
+    boundingBoxesResults_.image_height = frameHeight_;
+    boundingBoxesResults_.image_width = frameWidth_;
     boundingBoxesPublisher_.publish(boundingBoxesResults_);
   } else {
     darknet_ros_msgs::ObjectCount msg;
