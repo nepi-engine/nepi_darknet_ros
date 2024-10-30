@@ -185,6 +185,7 @@ class YoloObjectDetector
   image buffLetter_[3];
   int buffId_[3];
   int buffIndex_ = 0;
+  cv::Mat img_source_;
   cv::Mat ipl_;
   float fps_ = 0;
   float demoThresh_ = 0;

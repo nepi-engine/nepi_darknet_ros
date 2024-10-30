@@ -226,7 +226,6 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg)
     frameHeight_ = cam_image->image.size().height;
     if (detectionImagePublisher_.getNumSubscribers() < 1)
       return;
-    sourceImagePublisher_.publish(msg);
   }
   return;
 }
@@ -308,6 +307,8 @@ bool YoloObjectDetector::publishDetectionImage(const cv::Mat& detectionImage)
   cvImage.header.stamp = headerBuff_[buffIndex_].stamp;
   cvImage.header.frame_id = headerBuff_[buffIndex_].frame_id;
   cvImage.encoding = sensor_msgs::image_encodings::BGR8;
+  cvImage.image = img_source_;
+  sourceImagePublisher_.publish(*cvImage.toImageMsg());
   cvImage.image = detectionImage;
   detectionImagePublisher_.publish(*cvImage.toImageMsg());
   ROS_DEBUG("Detection image has been published.");
@@ -377,7 +378,8 @@ void *YoloObjectDetector::detectInThread()
 {
   running_ = 1;
   float nms = .4;
-
+  MatWithHeader_ imageAndHeader = getIplImageWithHeader();
+  img_source_ = imageAndHeader.image;
   layer l = net_->layers[net_->n - 1];
   float *X = buffLetter_[(buffIndex_ + 2) % 3].data;
   float *prediction = network_predict(net_, X);
@@ -401,6 +403,7 @@ void *YoloObjectDetector::detectInThread()
     boost::unique_lock<boost::shared_mutex> lockThreshold(mutexThreshold_);
     thresh = demoThresh_;
   }
+
   draw_detections(display, dets, nboxes, thresh, demoNames_, demoAlphabet_, demoClasses_);
 
   // extract the bounding boxes and send them to ROS
@@ -554,11 +557,11 @@ void YoloObjectDetector::yolo()
 
   layer l = net_->layers[net_->n - 1];
   roiBoxes_ = (darknet_ros::RosBox_ *) calloc(l.w * l.h * l.n, sizeof(darknet_ros::RosBox_));
-
+  cv::Mat ROS_img;
   {
     boost::shared_lock<boost::shared_mutex> lock(mutexImageCallback_);
     MatWithHeader_ imageAndHeader = getIplImageWithHeader();
-    cv::Mat ROS_img = imageAndHeader.image;
+    ROS_img = imageAndHeader.image;
     buff_[0] = mat_to_image(ROS_img);
     headerBuff_[0] = imageAndHeader.header;
   }
@@ -634,11 +637,6 @@ bool YoloObjectDetector::isNodeRunning(void)
 
 void *YoloObjectDetector::publishInThread()
 {
-  // Publish image.
-  cv::Mat cvImage = ipl_;
-  if (!publishDetectionImage(cv::Mat(cvImage))) {
-    ROS_DEBUG("Detection image has not been broadcasted.");
-  }
   std::string cameraTopicName;
   nodeHandle_.param("subscribers/camera_reading/topic", cameraTopicName,
                     std::string("/camera/image_raw"));
@@ -716,6 +714,13 @@ void *YoloObjectDetector::publishInThread()
     rosBoxes_[i].clear();
     rosBoxCounter_[i] = 0;
   }
+
+  // Publish images.
+  cv::Mat cvImage = ipl_;
+  if (!publishDetectionImage(cv::Mat(cvImage))) {
+    ROS_DEBUG("Detection image has not been broadcasted.");
+  }
+
 
   return 0;
 }
