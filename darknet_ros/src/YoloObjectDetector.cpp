@@ -128,10 +128,7 @@ void YoloObjectDetector::init()
   yoloThread_ = std::thread(&YoloObjectDetector::yolo, this);
 
   // Initialize publisher and subscriber.
-  std::string sourceImageTopicName;
   std::string setThresholdTopicName;
-  int sourceImageQueueSize;
-  bool sourceImageLatch;
   std::string cameraTopicName;
   int cameraQueueSize;
   std::string objectDetectorTopicName;
@@ -146,12 +143,10 @@ void YoloObjectDetector::init()
 
 
 
-  nodeHandle_.param("publishers/source_image/topic", sourceImageTopicName,
-                    std::string("source_image"));
+
   nodeHandle_.param("subscribers/threshold/topic", setThresholdTopicName,
-                    std::string("set_threshold"));       
-                              
-  nodeHandle_.param("publishers/source_image/latch", sourceImageLatch, true); 
+                    std::string("set_threshold"));                     
+
   nodeHandle_.param("subscribers/camera_reading/topic", cameraTopicName,
                     std::string("/camera/image_raw"));
   nodeHandle_.param("subscribers/camera_reading/queue_size", cameraQueueSize, 1);
@@ -168,12 +163,8 @@ void YoloObjectDetector::init()
   nodeHandle_.param("publishers/detection_image/queue_size", detectionImageQueueSize, 1);
   nodeHandle_.param("publishers/detection_image/latch", detectionImageLatch, true);
  
-  sourceImageQueueSize = 1;
   detectionImageQueueSize = 1;
 
-  sourceImagePublisher_ = nodeHandle_.advertise<sensor_msgs::Image>(sourceImageTopicName,
-                                                                       sourceImageQueueSize,
-                                                                       sourceImageLatch);
   imageSubscriber_ = imageTransport_.subscribe(cameraTopicName, cameraQueueSize,
                                                &YoloObjectDetector::cameraCallback, this);
   setThresholdSubscriber_ = nodeHandle_.subscribe(setThresholdTopicName, 1, &YoloObjectDetector::setThresholdCallback, this);
@@ -307,8 +298,6 @@ bool YoloObjectDetector::publishDetectionImage(const cv::Mat& detectionImage)
   cvImage.header.stamp = headerBuff_[buffIndex_].stamp;
   cvImage.header.frame_id = headerBuff_[buffIndex_].frame_id;
   cvImage.encoding = sensor_msgs::image_encodings::BGR8;
-  cvImage.image = img_source_;
-  sourceImagePublisher_.publish(*cvImage.toImageMsg());
   cvImage.image = detectionImage;
   detectionImagePublisher_.publish(*cvImage.toImageMsg());
   ROS_DEBUG("Detection image has been published.");
@@ -378,8 +367,6 @@ void *YoloObjectDetector::detectInThread()
 {
   running_ = 1;
   float nms = .4;
-  MatWithHeader_ imageAndHeader = getIplImageWithHeader();
-  img_source_ = imageAndHeader.image;
   layer l = net_->layers[net_->n - 1];
   float *X = buffLetter_[(buffIndex_ + 2) % 3].data;
   float *prediction = network_predict(net_, X);
