@@ -22,6 +22,7 @@
 
   <!-- Detection threshold -->
   <arg name="detection_threshold"        default="0.3"/>
+    <arg name="max_rate_hz"        default="1.0"/>
 
   <!-- Load parameters -->
   <rosparam command="load" ns="$(arg namespace)/$(arg node_name)" file="$(arg ros_param_file)"/>
@@ -32,8 +33,10 @@
     <param name="weights_path"          value="$(arg yolo_weights_path)" />
     <param name="config_path"           value="$(arg yolo_config_path)" />
     <param name="yolo_model/threshold/value" value="$(arg detection_threshold)" />
+    <param name="yolo_model/max_rate/value" value="$(arg max_rate_hz)" />
     <param name="subscribers/camera_reading/topic" value="$(arg input_img)" />
     <param name="subscribers/threshold/topic" value="$(arg namespace)/set_threshold" />
+    <param name="subscribers/max_rate/topic" value="$(arg namespace)/set_max_rate" />
     <param name="publishers/source_image/topic" value="$(arg namespace)/source_image" />
     <param name="publishers/detection_image/topic" value="$(arg namespace)/detection_image" />
     <param name="publishers/object_detector/topic" value="$(arg namespace)/found_object" />

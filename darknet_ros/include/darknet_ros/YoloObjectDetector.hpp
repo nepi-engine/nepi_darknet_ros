@@ -100,7 +100,9 @@ class YoloObjectDetector
    * Initialize the ROS connections.
    */
   void init();
-
+  
+  
+  float time_dif_in_seconds(std::chrono::system_clock::time_point start, std::chrono::system_clock::time_point end);
   /*!
    * Callback of camera.
    * @param[in] msg image pointer.
@@ -112,6 +114,7 @@ class YoloObjectDetector
    * @param[in] msg new threshold value
    */
   void setThresholdCallback(const std_msgs::Float32ConstPtr& msg);
+  void setMaxRateCallback(const std_msgs::Float32ConstPtr& msg);
 
   /*!
    * Check for objects action goal callback.
@@ -155,6 +158,7 @@ class YoloObjectDetector
   //! ROS subscriber and publisher.
   image_transport::Subscriber imageSubscriber_;
   ros::Subscriber setThresholdSubscriber_;
+  ros::Subscriber setMaxRateSubscriber_;
   ros::Publisher objectPublisher_;
   ros::Publisher boundingBoxesPublisher_;
 
@@ -188,7 +192,9 @@ class YoloObjectDetector
   cv::Mat img_source_;
   cv::Mat ipl_;
   float fps_ = 0;
-  float demoThresh_ = 0;
+  float demoThresh_ = 0.1;
+  float demoRate_ = 1.0;
+  std::chrono::high_resolution_clock::time_point lastTime_;
   float demoHier_ = .5;
   int running_ = 0;
 
@@ -202,6 +208,7 @@ class YoloObjectDetector
   float *avg_;
   int demoTotal_ = 0;
   double demoTime_;
+  bool detectDone_ = true;
 
   RosBox_ *roiBoxes_;
   bool viewImage_;
@@ -243,7 +250,7 @@ class YoloObjectDetector
 
   void *detectLoop(void *ptr);
 
-  void setupNetwork(char *cfgfile, char *weightfile, char *datafile, float thresh,
+  void setupNetwork(char *cfgfile, char *weightfile, char *datafile, float thresh, float maxRate,
                     char **names, int classes,
                     int delay, char *prefix, int avg_frames, float hier, int w, int h,
                     int frames, int fullscreen);

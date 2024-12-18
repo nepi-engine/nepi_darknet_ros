@@ -94,6 +94,10 @@ void YoloObjectDetector::init()
   float thresh;
   nodeHandle_.param("yolo_model/threshold/value", thresh, (float) 0.3);
 
+  // Max Rate of object detection.
+  float maxRate;
+  nodeHandle_.param("yolo_model/max_rate/value", maxRate, (float) 1.0);
+  lastTime_ = std::chrono::high_resolution_clock::now();
   // Path to weights file.
   nodeHandle_.param("yolo_model/weight_file/name", weightsModel,
                     std::string("yolov2-tiny.weights"));
@@ -123,12 +127,13 @@ void YoloObjectDetector::init()
   }
 
   // Load network.
-  setupNetwork(cfg, weights, data, thresh, detectionNames, numClasses_,
+  setupNetwork(cfg, weights, data, thresh, maxRate, detectionNames, numClasses_,
                 0, 0, 1, 0.5, 0, 0, 0, 0);
   yoloThread_ = std::thread(&YoloObjectDetector::yolo, this);
 
   // Initialize publisher and subscriber.
   std::string setThresholdTopicName;
+  std::string setMaxRateTopicName;
   std::string cameraTopicName;
   int cameraQueueSize;
   std::string objectDetectorTopicName;
@@ -145,7 +150,10 @@ void YoloObjectDetector::init()
 
 
   nodeHandle_.param("subscribers/threshold/topic", setThresholdTopicName,
-                    std::string("set_threshold"));                     
+                    std::string("set_threshold"));      
+
+  nodeHandle_.param("subscribers/max_rate/topic", setMaxRateTopicName,
+                    std::string("set_max_rate"));                  
 
   nodeHandle_.param("subscribers/camera_reading/topic", cameraTopicName,
                     std::string("/camera/image_raw"));
@@ -168,6 +176,8 @@ void YoloObjectDetector::init()
   imageSubscriber_ = imageTransport_.subscribe(cameraTopicName, cameraQueueSize,
                                                &YoloObjectDetector::cameraCallback, this);
   setThresholdSubscriber_ = nodeHandle_.subscribe(setThresholdTopicName, 1, &YoloObjectDetector::setThresholdCallback, this);
+  setMaxRateSubscriber_ = nodeHandle_.subscribe(setMaxRateTopicName, 1, &YoloObjectDetector::setMaxRateCallback, this);
+  
   objectPublisher_ = nodeHandle_.advertise<darknet_ros_msgs::ObjectCount>(objectDetectorTopicName,
                                                                             objectDetectorQueueSize,
                                                                             objectDetectorLatch);
@@ -234,6 +244,22 @@ void YoloObjectDetector::setThresholdCallback(const std_msgs::Float32::ConstPtr&
     boost::unique_lock<boost::shared_mutex> lockThreshold(mutexThreshold_);
     demoThresh_ = (new_thresh == 0.0f)? 0.01 : new_thresh;
     ROS_INFO("YoloObjectDetector threshold set to %f", demoThresh_);
+  }
+}
+
+
+void YoloObjectDetector::setMaxRateCallback(const std_msgs::Float32::ConstPtr& msg)
+{
+  const float new_rate = msg->data;
+  if (new_rate < 0.01f )
+  {
+    ROS_ERROR("Invalid YoloObjectDetector rate %f: Must be in [0.0, 1.0]", new_rate);
+    return;
+  }
+  {
+    // Avoid setting rate to 0 -- use an epsilon instead
+    demoRate_ = (new_rate == 0.0f)? 0.01 : new_rate;
+    ROS_INFO("YoloObjectDetector rate set to %f", demoRate_);
   }
 }
 
@@ -498,7 +524,7 @@ void *YoloObjectDetector::detectLoop(void *ptr)
   }
 }
 
-void YoloObjectDetector::setupNetwork(char *cfgfile, char *weightfile, char *datafile, float thresh,
+void YoloObjectDetector::setupNetwork(char *cfgfile, char *weightfile, char *datafile, float thresh, float maxRate,
                                       char **names, int classes,
                                       int delay, char *prefix, int avg_frames, float hier, int w, int h,
                                       int frames, int fullscreen)
@@ -511,6 +537,7 @@ void YoloObjectDetector::setupNetwork(char *cfgfile, char *weightfile, char *dat
   demoAlphabet_ = alphabet;
   demoClasses_ = classes;
   demoThresh_ = thresh;
+  demoRate_ = maxRate;
   demoHier_ = hier;
   fullScreen_ = fullscreen;
   printf("YOLO V3\n");
@@ -528,7 +555,7 @@ void YoloObjectDetector::yolo()
     }
     std::this_thread::sleep_for(wait_duration);
   }
-
+  printf("Got image.\n");
   std::thread detect_thread;
   std::thread fetch_thread;
 
@@ -575,33 +602,55 @@ void YoloObjectDetector::yolo()
   }
 
   demoTime_ = what_time_is_it_now();
+  float delay_time = 1./demoRate_;
+  std::chrono::high_resolution_clock::time_point current_time = std::chrono::high_resolution_clock::now();
+  float timer =  time_dif_in_seconds(lastTime_,current_time);
 
   while (!demoDone_) {
-    buffIndex_ = (buffIndex_ + 1) % 3;
-    fetch_thread = std::thread(&YoloObjectDetector::fetchInThread, this);
-    detect_thread = std::thread(&YoloObjectDetector::detectInThread, this);
-    if (!demoPrefix_) {
-      fps_ = 1./(what_time_is_it_now() - demoTime_);
-      demoTime_ = what_time_is_it_now();
-      if (viewImage_) {
-        displayInThread(0);
+
+    delay_time = 1./demoRate_;
+    current_time = std::chrono::high_resolution_clock::now();
+    timer =  time_dif_in_seconds(lastTime_,current_time);
+    if (timer > delay_time){
+      //printf("Processing Detection.\n");
+      lastTime_ = current_time;
+      buffIndex_ = (buffIndex_ + 1) % 3;
+      fetch_thread = std::thread(&YoloObjectDetector::fetchInThread, this);
+      detect_thread = std::thread(&YoloObjectDetector::detectInThread, this);
+      if (!demoPrefix_) {
+        fps_ = 1./(what_time_is_it_now() - demoTime_);
+        demoTime_ = what_time_is_it_now();
+        if (viewImage_) {
+          displayInThread(0);
+        } else {
+          generate_image(buff_[(buffIndex_ + 1)%3], ipl_);
+        }
+        publishInThread();
       } else {
-        generate_image(buff_[(buffIndex_ + 1)%3], ipl_);
+        char name[256];
+        sprintf(name, "%s_%08d", demoPrefix_, count);
+        save_image(buff_[(buffIndex_ + 1) % 3], name);
       }
-      publishInThread();
-    } else {
-      char name[256];
-      sprintf(name, "%s_%08d", demoPrefix_, count);
-      save_image(buff_[(buffIndex_ + 1) % 3], name);
+      fetch_thread.join();
+      detect_thread.join();
+      ++count;
     }
-    fetch_thread.join();
-    detect_thread.join();
-    ++count;
     if (!isNodeRunning()) {
       demoDone_ = true;
     }
+    //printf("\nDelay:%.2f\n",delay_time);
+    //printf("\nTimer:%.2f\n",timer);
+    //sleep(1.0);
+    sleep(0.01);
   }
 
+}
+
+float YoloObjectDetector::time_dif_in_seconds(std::chrono::system_clock::time_point start, std::chrono::system_clock::time_point end) {
+    std::chrono::duration<float, std::milli> elapsed_milliseconds = end - start;
+    float milliseconds = elapsed_milliseconds.count();
+    float duration_sec = milliseconds / 1000.0;
+    return duration_sec;
 }
 
 MatWithHeader_ YoloObjectDetector::getIplImageWithHeader()
