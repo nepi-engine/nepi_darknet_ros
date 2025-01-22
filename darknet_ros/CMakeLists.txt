@@ -62,7 +62,7 @@ find_package(catkin REQUIRED
     actionlib
     darknet_ros_msgs
     image_transport
-    nepi_edge_sdk_base
+    nepi_sdk
 )
 
 # Enable OPENCV in darknet
